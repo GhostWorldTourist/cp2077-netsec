@@ -14,8 +14,10 @@
 #                          have been uploaded by hand once; this action adds
 #                          versions to an existing file, it does not create one.
 #   var    NEXUS_MOD_ID    NOT the number in the mod URL. That one is
-#                          game-scoped. The API wants the `id` field from
+#                          game-scoped. The API wants `data.id` from
 #                          https://api.nexusmods.com/v3/games/cyberpunk2077/mods/33302
+#                          (send the key as an `apikey:` header). For NetSec the
+#                          URL says 33302 and the API wants 14315126030870.
 #                          Only needed because we post a changelog.
 #
 # Set them with:
