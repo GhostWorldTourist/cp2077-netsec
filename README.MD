@@ -4,6 +4,8 @@ The year is 2077. Most of the world knows about quickhacks: dangerous software t
 
 This re-imagining of Better Netrunning offers numerous improvements over [the original Better Netrunning](https://www.nexusmods.com/cyberpunk2077/mods/2302) by finley243 and the fix Kei created. Most importantly, this mod shouldn't cause the crashes and save instabilities the earlier versions could introduce.
 
+You can download this mod on [Nexus Mods](https://www.nexusmods.com/cyberpunk2077/mods/33302).
+
 ## Hacking Options
 When you hack one of these jack-in points, you'll see some new options:
 
@@ -190,7 +192,7 @@ If the export has `"nodes": []` in it, go back to step 5 — the group wasn't sa
 ## Credits
 
 NetSec wouldn't exist without the important foundational work from these modders:
-[the original Better Netrunning](https://www.nexusmods.com/cyberpunk2077/mods/2302) by finley243
-[Better Netrunning Fix](https://www.nexusmods.com/cyberpunk2077/mods/24482) by Kei Sagano
+- [the original Better Netrunning](https://www.nexusmods.com/cyberpunk2077/mods/2302) by finley243
+- [Better Netrunning Fix](https://www.nexusmods.com/cyberpunk2077/mods/24482) by Kei Sagano
 
 NetSec was built with AI assistance from [Cyberwise](https://github.com/GhostWorldTourist/cyberwise), a suite of AI tools for working with modded Cyberpunk 2077 games. If you're interested, I'd love feedback on it. To those opposed to it based on its description, I respect your right to that opinion, and I'm very aware of how many poorly written tools and ideas there are for using AI for modded games. Please try to understand I've spent considerable time and expertise on this; look into it before you call it "slop", please and thank you.
