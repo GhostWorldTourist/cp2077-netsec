@@ -1,0 +1,90 @@
+[size=6][b]NetSec: Make Netrunning Strategic Again[/b][/size]
+
+The year is 2077. Most of the world knows about quickhacks: dangerous software that can be emitted into your skull by someone just [i]thinking about it[/i]. So why the hell is no one implementing network security?
+
+There was an implementation in the game, but it was a ridiculous, boring power creep. Let's bring it back, the right way.
+
+NetSec locks networks out of hacking until [i]you[/i] hack in. Any access point, vending machine, or forklift with a jack-in slot is suddenly your doorway into pwning the network. Breach as far as you can in the hacking minigame and you gain some — or total — control.
+
+[size=5][b]Hacking Options[/b][/size]
+
+When you jack into one of those points, you'll see new options. Each grants everything above it, so there is never a reason to upload two.
+
+[list]
+[*][b]/DEVICE/[/b] — doors, windows, microwaves, gas tanks, that sort of thing. [i]INT 4[/i]
+[*][b]/DEVICE|CAM/[/b] — the above, plus cameras for control and disabling. [i]INT 5[/i]
+[*][b]/DEVICE|CAM|DEF/[/b] — the above, plus defences: turrets and bots. [i]INT 6[/i]
+[*][b]/ALL/[/b] — full network access, including personnel.
+[/list]
+
+There is no single INT number on /ALL/: each ring keeps its own requirement, and quickhacks on people have four of their own. Uploading /ALL/ always works — Intelligence only decides how much of what you took you can actually use.
+
+A ring is only offered when the network actually has that behind it. A yard with no cameras will not sell you the camera ring.
+
+[size=5][b]Things to Know[/b][/size]
+
+[list=1]
+[*]If you fail to hack anything at all — by losing the minigame, or backing out before any upload completes — the crew whose net you touched is coming for you. People are terrified of getting quickhacked. They dispose of suspected netrunners with extreme prejudice.
+[*]A breached network stays open for 2 in-game hours, measured from your [b]most recent breach anywhere[/b]. Keep working and you keep what you hold; walk away and it all lapses together. Configurable.
+[*]If you lack the INT for a ring you can still upload it and still get paid — a HUD message tells you what you gained and what you need more Intelligence to use.
+[*]Quickhacks on people are tiered separately: INT 4 covert, 5 damage, 6 control, 9 ultimate.
+[*]Tiered breaching takes the three Datamine daemons off the board and puts the rings there instead. You do not lose the income — see below — but that is where the Datamines went.
+[*]You still get paid. /DEVICE/ and /DEVICE|CAM/ give eurodollars; /DEVICE|CAM|DEF/ adds components; /ALL/ adds a chance at a quickhack shard. Can be turned off.
+[*]If a device or person isn't on a network with a way in, it stays unlocked. Stupid gonk shoulda set up a net; they get what they get.
+[*]I've placed access points in the world where none existed. Just one in Kabuki so far — more to come.
+[/list]
+
+[size=5][b]Requirements[/b][/size]
+
+[list]
+[*][url=https://www.nexusmods.com/cyberpunk2077/mods/2380]RED4ext[/url]
+[*][url=https://www.nexusmods.com/cyberpunk2077/mods/1511]redscript[/url]
+[*][url=https://www.nexusmods.com/cyberpunk2077/mods/4197]TweakXL[/url]
+[*][url=https://www.nexusmods.com/cyberpunk2077/mods/4198]ArchiveXL[/url]
+[*][url=https://www.nexusmods.com/cyberpunk2077/mods/4885]Mod Settings[/url]
+[/list]
+
+That is the whole list. [b]No CET, no Codeware, no CustomHackingSystem.[/b] Written and tested against game version 2.31.
+
+[size=5][b]Compatibility[/b][/size]
+
+[b]Do not run this with [url=https://www.nexusmods.com/cyberpunk2077/mods/2302]Better Netrunning[/url] or [url=https://www.nexusmods.com/cyberpunk2077/mods/24482]Better Netrunning Fix[/url].[/b] NetSec is a rewrite of the same idea and gates the same methods. They will fight. Uninstall the other one first.
+
+Other quickhacking mods are likely fine, but it depends what they change. NetSec uses no [font=Courier New]@replaceMethod[/font] anywhere — every hook is a wrap, so other mods touching the same methods still run.
+
+Specifically compatible:
+
+[list]
+[*][url=https://www.nexusmods.com/cyberpunk2077/mods/5092]Vehicle Security Rework[/url] — vehicles are explicitly exempt. Car security is that mod's job and it does it properly. (Get it, it's great.)
+[*][b]Vending machines[/b] are never gated. They're the corner shop, not security infrastructure — and they stay usable as a way [i]into[/i] a network.
+[*][b]Quest daemons are never removed.[/b] Tiered breaching clears the three generic Datamines by exact ID and touches nothing else.
+[/list]
+
+[size=5][b]Your Save[/b][/size]
+
+NetSec adds six persistent fields — four to devices, one to people, one to the player — to remember what you've breached and when. Adding them is safe and alters nothing the base game stores.
+
+Removing them is the ordinary redscript uninstall case and should be equally safe, but this has not yet been tested on a real save — treat uninstalling mid-playthrough as untested rather than known-good. Turning [b]Enable NetSec[/b] off is always safe.
+
+[size=5][b]Options[/b][/size]
+
+Everything is in the [b]Mod Settings[/b] menu under NetSec. The defaults are a complete game — you don't have to configure anything. Settings live in [font=Courier New]red4ext/plugins/mod_settings/user.ini[/font], so you can read, diff and back them up like any text file.
+
+The full option list, with defaults and what each one does, is on the [url=https://github.com/GhostWorldTourist/cp2077-netsec]GitHub page[/url].
+
+[size=5][b]Found a network with no way in?[/b][/size]
+
+Night City has networks with a breach marker and nothing you can reach. NetSec leaves those open rather than taunting you, but the better answer is an access point that should have been there.
+
+[b]Place one and send it to me and I'll add it to the mod, crediting you.[/b] Full instructions — which World Builder options to use, and the one dropdown everybody gets wrong — are in the [url=https://github.com/GhostWorldTourist/cp2077-netsec]README on GitHub[/url].
+
+[size=5][b]Credits[/b][/size]
+
+NetSec wouldn't exist without the foundational work of:
+
+[list]
+[*][url=https://www.nexusmods.com/cyberpunk2077/mods/2302]Better Netrunning[/url] by [b]finley243[/b]
+[*][url=https://www.nexusmods.com/cyberpunk2077/mods/24482]Better Netrunning Fix[/url] by [b]Kei Sagano[/b] — who also translates many popular CP2077 mods into Japanese; [url=https://www.nexusmods.com/profile/KeiSagano/mods]go check them out[/url].
+[/list]
+
+NetSec was built with AI assistance from [url=https://github.com/GhostWorldTourist/cyberwise]Cyberwise[/url], a suite of AI tools for working with modded Cyberpunk 2077 installs. I'd love feedback on it. I'm aware of how many poorly written AI tools and ideas exist for modded games; I've spent considerable time and expertise on this one.
