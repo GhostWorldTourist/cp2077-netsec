@@ -1,0 +1,44 @@
+# NetSec - the access points the world is missing.
+#
+# NetSec gates a network behind its access point. Some networks do not have one
+# you can reach, and a mod that locks doors without supplying keys is half a
+# mod. These are the keys, placed by hand where the world needed one.
+#
+# WHY A BLOCK AND NOT A LIST OF SECTORS - the thing that cost weeks.
+#
+# An earlier attempt declared the sector directly:
+#
+#     streaming:
+#       sectors:
+#         - path: netsec_accesspoint.streamingsector
+#
+# Nothing ever spawned, and ArchiveXL never complained - because nothing was
+# malformed. `sectors:` is for EDITING a sector that already exists, which is
+# why every entry under it in every other mod carries `expectedNodes` and a list
+# of nodeDeletions or nodeMutations against vanilla content. It is not a way to
+# introduce one.
+#
+# A NEW sector has to be registered in a streamingblock, and the block is what
+# gets declared. Confirmed against ###_longer_lockdown.archive.xl, a World
+# Builder mod installed and working on this machine, which ships
+# `<name>\sectors\*.streamingsector` beside `<name>\all.streamingblock` and
+# declares only the block. Surveying every .xl in the load order also settled
+# the other half: 2,243 expectedNodes, 1,408 nodeDeletions, 1,040 nodeMutations,
+# 125 blocks - and ZERO nodeAdditions. There is no way to add a node to a vanilla
+# sector, so this is not one route among several. It is the only one.
+#
+# ON AlwaysLoaded.
+#
+# Both the sector and its descriptor use category AlwaysLoaded, matching the
+# working example rather than the "Exterior" the World Builder export suggests.
+# The reasoning: an Exterior sector is found through the world's own streaming
+# grid, and nothing registers a mod's block into that grid - so a category that
+# depends on it may simply never be reached. AlwaysLoaded does not depend on it.
+#
+# The cost is real and worth writing down before this list grows: an
+# AlwaysLoaded sector is resident. One access point is nothing; several hundred
+# is a decision that needs measuring rather than assuming. Revisit before this
+# file gets long.
+streaming:
+  blocks:
+    - netsec_access_points\all.streamingblock

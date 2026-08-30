@@ -1,0 +1,32 @@
+# NetSec - its own strings.
+#
+# The daemon reads "Breach Network" / "Breach local network" on the breach
+# screen, from keys NetSec owns rather than words borrowed from a vanilla
+# record.
+#
+# WHY THIS IS THE SECOND ATTEMPT, AND WHAT IS DIFFERENT.
+#
+# v1.5.16 shipped an onscreens resource authored from a GUESSED CR2W schema.
+# ArchiveXL logged loading the .xl, never logged merging the entries, and the
+# log ended mid-merge - the game crashed, and it was reverted the same evening.
+# Round-tripping it through WolvenKit had "verified" it, which proved only that
+# WolvenKit could read back what WolvenKit had written.
+#
+# The difference this time is the template. This resource is built from the
+# structure of a mod ALREADY INSTALLED AND WORKING on this machine -
+# BlackChrome's phoenicia\blackchrome\translations\translation_strings.json,
+# which ships named keys of exactly this kind and is referenced from TweakXL the
+# same way. Its CR2W string table was compared against this one field by field.
+#
+# That comparison also named the old file's actual defect, which no amount of
+# round-tripping could have shown: it declared the container type
+# localizationPersistenceOnScreenEntries and never once declared
+# localizationPersistenceOnScreenEntry, the per-entry type. The entries had no
+# type to be. Vanilla's onscreens_final.json and BlackChrome's file both carry
+# both names; the 1.5.16 archive carried only the first.
+#
+# Still not proof the runtime accepts it - only a run is that. The line to look
+# for is ArchiveXL logging the merge of these entries and CONTINUING past it.
+localization:
+  onscreens:
+    en-us: netsec\localization\en-us\onscreens\netsec.json

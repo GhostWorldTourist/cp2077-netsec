@@ -1,0 +1,181 @@
+# NetSec - the access daemon
+#
+# Two records, both clones of vanilla ones, declared here rather than created at
+# runtime from Lua. Better Netrunning built the equivalent with CET
+# (TweakDB:CloneRecord in tweakdbSetup.lua); TweakXL does it declaratively, which
+# is why NetSec needs no CET at all.
+#
+# The pair is how one daemon works: MinigameAction is the daemon, Interactions is
+# how it presents itself in the breach screen.
+
+# --- how it looks in the breach list ---------------------------------------
+#
+# CAPTION AND DESCRIPTION ARE LOCKEYS. A raw string here is not a caption the
+# player never sees translated - it is a caption that does not resolve at all,
+# and the breach screen falls back to the placeholder "Program" / "Program
+# Name". That placeholder shipped for nine versions.
+#
+# The reason is one line of the game's own code, hackingMinigameUtils.script:854:
+#
+#     program.name = StringToName( LocKeyToString( miniGameActionRecord.ObjectActionUI().Caption() ) );
+#     program.note = miniGameActionRecord.ObjectActionUI().Description();
+#
+# LocKeyToString takes a key and returns the localized text. Hand it "NETWORK
+# ACCESS" and there is no key by that name, so nothing comes back.
+#
+# Note also what that line does NOT read: `programName` on the MinigameProgramData
+# value. The name on screen comes from THIS record, never from the value the
+# program was constructed with - programName is only a validity token, checked
+# against IsNameValid and 'None' at hackingMinigameUtils.script:891.
+#
+# A NAMED LOCKEY IS STILL A LOCKEY. These two resolve against NetSec's own
+# onscreens resource, shipped in netsec_loc.archive and declared by
+# netsec_loc.archive.xl - the same mechanism, and the same spelling, that
+# BlackChrome uses for LocKey#blackchrome_aegis_name on this install.
+#
+# The vanilla pair below did the job and needed no archive at all, and is what
+# to fall back to if the resource ever fails to load:
+#
+#     78403  Gameplay-Devices-Interactions-NetworkGainAccess      "Gain Access"
+#     78404  Gameplay-Devices-Interactions-NetworkGainAccessDesc  "Gains access to encrypted data."
+#
+# It was replaced because "Gain Access" is the game's phrasing for a vanilla
+# daemon, and this one is not that daemon.
+Interactions.NetSecAccess:
+    $base: Interactions.NetworkGainAccessProgram
+    caption: LocKey#netsec_breach_network
+    description: LocKey#netsec_breach_network_desc
+    captionIcon: ChoiceCaptionParts.BreachProtocolIcon
+
+# --- the daemon itself ------------------------------------------------------
+#
+# COMPLEXITY IS THE PRICE - but a price nobody can pay is not a price.
+#
+# This was 45.0, picked to sit "above Advanced Datamine" with no idea what the
+# number means for sequence length against a real buffer. In play the daemon
+# appeared on the screen twice and was never the one that could be completed:
+# the solvable sequence was always a Datamine, so a mechanic gated on uploading
+# NETWORK ACCESS was gated on something unreachable.
+#
+# 20.0 is Better Netrunning's value for its basic unlock daemon, which is the
+# closest thing to a proven-solvable figure available. Access should cost buffer
+# you would rather spend on eurodollars; it should not cost a sequence the board
+# does not offer.
+#
+# completionEffects is emptied because the effect belongs to NetSec, not to the
+# record this was cloned from - the clone is borrowing a shape, not a behaviour.
+#
+# THE BASE RECORD MATTERS, and NetworkLowerICEMajor was the wrong one. It is an
+# ICE daemon, and on this install the cloned daemon appeared on the breach screen
+# but was never the program that could be completed - twice, at two different
+# complexities, so complexity was not the cause. Its caption never resolved
+# either, which points at a record that is only half-formed for this purpose.
+#
+# NetworkDataMineLootAll is the daemon every breach offers and every player
+# completes. Cloning the shape that demonstrably works on the board is a better
+# starting point than one that demonstrably does not.
+MinigameAction.NetSecUnlock:
+    $base: MinigameAction.NetworkDataMineLootAll
+    objectActionType: ObjectActionType.MinigameUpload
+    objectActionUI: Interactions.NetSecAccess
+    completionEffects: []
+    complexity: 45.0
+    type: MinigameAction.Both
+
+# ============================================================================
+# THE FOUR RINGS
+# ============================================================================
+#
+# Tiered breaching offers these four instead of the three Datamines, so what you
+# spend buffer on is which parts of the network you take rather than how much
+# money you leave with. Four is the ceiling: past that the board carries so many
+# sequences that something is always completable and the minigame stops being a
+# decision.
+#
+# EVERY ONE CLONES NetworkDataMineLootAll. Not for its behaviour - completionEffects
+# is emptied - but because it is the daemon every breach offers and every player
+# completes, so its shape is proven to appear and be solvable on a real board.
+# Cloning what demonstrably works is the same reasoning that fixed the single
+# daemon, and it means complexity is inherited from a shipped record rather than
+# invented here.
+#
+# THE LADDER, AND THE ARITHMETIC BEHIND IT.
+#
+# All four shipped at the same complexity in 1.9.0, so all four drew the same
+# sequence length and the rings cost the same regardless of what they bought.
+# What complexity actually drives, from hackingMinigameUtils.script:851 and
+# DefineLength at :966 -
+#
+#     combined = complexity + powerLevel + extraDifficulty
+#     combined -= 3 * combined * numPrograms / 120      (x0.9 with four programs)
+#     length    = 2 + (combined - 1) * 3 / 119, truncated
+#     clamped to [2,5], and never more than the buffer
+#
+# So sequence length steps up as complexity + the target's power level crosses
+# roughly 45, 89 and 133. These four are spaced to land on 2 / 3 / 4 / 5 at a
+# middling power level and to compress upward in harder territory, which is the
+# right direction: a corpo tower should not be cheaper than a Kabuki alley.
+#
+# The clamp is why this is safe to tune by eye - length can never exceed 5 or the
+# buffer, so no value here can produce the "offered but never completable" daemon
+# that 1.3 spent two releases chasing.
+#
+# Devices is deliberately near-free. It is the ring you take when you just want
+# the door open, and charging for it would make the cheap option the expensive
+# one.
+
+Interactions.NetSecRingDevices:
+    $base: Interactions.NetworkGainAccessProgram
+    caption: LocKey#netsec_ring_devices
+    description: LocKey#netsec_ring_devices_desc
+    captionIcon: ChoiceCaptionParts.BreachProtocolIcon
+
+MinigameAction.NetSecUnlockDevices:
+    $base: MinigameAction.NetworkDataMineLootAll
+    objectActionType: ObjectActionType.MinigameUpload
+    complexity: 10.0
+    objectActionUI: Interactions.NetSecRingDevices
+    completionEffects: []
+    type: MinigameAction.Both
+
+Interactions.NetSecRingCameras:
+    $base: Interactions.NetworkGainAccessProgram
+    caption: LocKey#netsec_ring_cameras
+    description: LocKey#netsec_ring_cameras_desc
+    captionIcon: ChoiceCaptionParts.BreachProtocolIcon
+
+MinigameAction.NetSecUnlockCameras:
+    $base: MinigameAction.NetworkDataMineLootAll
+    objectActionType: ObjectActionType.MinigameUpload
+    complexity: 50.0
+    objectActionUI: Interactions.NetSecRingCameras
+    completionEffects: []
+    type: MinigameAction.Both
+
+Interactions.NetSecRingDefences:
+    $base: Interactions.NetworkGainAccessProgram
+    caption: LocKey#netsec_ring_defences
+    description: LocKey#netsec_ring_defences_desc
+    captionIcon: ChoiceCaptionParts.BreachProtocolIcon
+
+MinigameAction.NetSecUnlockDefences:
+    $base: MinigameAction.NetworkDataMineLootAll
+    objectActionType: ObjectActionType.MinigameUpload
+    complexity: 90.0
+    objectActionUI: Interactions.NetSecRingDefences
+    completionEffects: []
+    type: MinigameAction.Both
+
+Interactions.NetSecRingPeople:
+    $base: Interactions.NetworkGainAccessProgram
+    caption: LocKey#netsec_ring_people
+    description: LocKey#netsec_ring_people_desc
+    captionIcon: ChoiceCaptionParts.BreachProtocolIcon
+
+MinigameAction.NetSecUnlockPeople:
+    $base: MinigameAction.NetworkDataMineLootAll
+    objectActionType: ObjectActionType.MinigameUpload
+    complexity: 130.0
+    objectActionUI: Interactions.NetSecRingPeople
+    completionEffects: []
+    type: MinigameAction.Both
