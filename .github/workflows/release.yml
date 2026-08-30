@@ -1,22 +1,27 @@
-# Build the mod archive when a version tag is pushed, attach it to a GitHub
-# Release, and hand it to Nexus.
+# Push a version tag, get a GitHub release AND a new file version on Nexus.
 #
 # The package is built by tools/New-ModPackage.ps1 - the same script run
-# locally - rather than by a second copy of the packing rules living in YAML.
-# If the zip is wrong it is wrong in one place.
+# locally - so if the zip is wrong it is wrong in one place. Nothing reaches
+# Nexus until that zip has been opened and checked, because a package that
+# installs cleanly and does nothing is the failure mode that wastes a player's
+# evening and looks like a bug in the game.
 #
-# ON THE NEXUS STEP
+# SETUP, ONCE. Three values, all on the repo rather than in this file:
 #
-# Nexus Mods has no first-party publishing API: their public API reads mod data
-# and manages endorsements, and there is no supported endpoint for uploading a
-# file to a mod page. Every "upload to Nexus" action is a community project
-# driving the website with stored credentials.
+#   secret NEXUS_API_KEY   https://www.nexusmods.com/settings/api-keys
+#   var    NEXUS_FILE_ID   the FILE to add versions to - Files tab -> API Info,
+#                          or the edit menu on Manage Files. A file must already
+#                          have been uploaded by hand once; this action adds
+#                          versions to an existing file, it does not create one.
+#   var    NEXUS_MOD_ID    NOT the number in the mod URL. That one is
+#                          game-scoped. The API wants the `id` field from
+#                          https://api.nexusmods.com/v3/games/cyberpunk2077/mods/33302
+#                          Only needed because we post a changelog.
 #
-# So this workflow does NOT upload. It produces the artefact, names it exactly
-# as the mod page wants it, and prints the two facts needed to publish. The last
-# step is a browser and thirty seconds, and in exchange no third-party action
-# ever holds a Nexus session cookie. If Nexus ships a real upload API this is
-# the place to wire it.
+# Set them with:
+#   gh secret set NEXUS_API_KEY
+#   gh variable set NEXUS_FILE_ID --body '<id>'
+#   gh variable set NEXUS_MOD_ID  --body '<id>'
 
 name: release
 
@@ -31,33 +36,42 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      zipname: ${{ steps.v.outputs.zipname }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # A package that installs to the wrong place is worse than no package, so
-      # the builder asserts its own zip roots and this fails if it complains.
-      - name: Build package
+      - name: Version from tag
+        id: v
         shell: pwsh
         run: |
           $v = "${{ github.ref_name }}" -replace '^v', ''
           if ($v -notmatch '^\d+\.\d+\.\d+$') { $v = '0.0.0-dev' }
-          .\tools\New-ModPackage.ps1 -Version $v
+          "version=$v"                >> $env:GITHUB_OUTPUT
+          "zipname=NetSec-$v.zip"     >> $env:GITHUB_OUTPUT
 
-      - name: Verify the archive installs where a manager expects
+      - name: Build package
+        shell: pwsh
+        run: .\tools\New-ModPackage.ps1 -Version '${{ steps.v.outputs.version }}'
+
+      # The gate. A mod manager unpacks relative to the game root, so the zip
+      # roots ARE the install instruction, and a missing file installs silently.
+      - name: Verify the archive
         shell: pwsh
         run: |
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $zip = Get-ChildItem build\*.zip | Select-Object -First 1
-          $z = [System.IO.Compression.ZipFile]::OpenRead($zip.FullName)
+          $zip = Join-Path 'build' '${{ steps.v.outputs.zipname }}'
+          $z = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip))
           try {
             $names = $z.Entries.FullName
-            # These four are the whole mod. If any is missing the zip installs
-            # cleanly and the mod does nothing, which is the failure mode that
-            # wastes a player's evening and looks like a bug in the game.
+            $roots = $names | ForEach-Object { ($_ -split '/')[0] } | Sort-Object -Unique
+            $bad = @($roots | Where-Object { $_ -notin 'r6','archive' })
+            if ($bad) { throw "zip root has $($bad -join ', ') - a manager would install this to the wrong place" }
             foreach ($need in @(
               'r6/scripts/NetSec/Breach.reds',
               'r6/tweaks/NetSec/netsec_daemon.yaml',
@@ -65,33 +79,79 @@ jobs:
               'archive/pc/mod/netsec_access_points.archive')) {
               if ($names -notcontains $need) { throw "package is missing $need" }
             }
-            Write-Host "ok: $($z.Entries.Count) entries, all required paths present"
+            Write-Host "ok: $($z.Entries.Count) entries, roots $($roots -join ', ')"
           } finally { $z.Dispose() }
+
+      # Everything since the previous tag, as the changelog both destinations get.
+      - name: Changelog
+        id: log
+        shell: bash
+        run: |
+          prev=$(git describe --tags --abbrev=0 "${{ github.ref_name }}^" 2>/dev/null || true)
+          if [ -n "$prev" ]; then
+            body=$(git log --no-merges --pretty=format:'- %s' "$prev..${{ github.ref_name }}")
+          else
+            body="First public release."
+          fi
+          { echo 'text<<NEXUSEOF'; echo "$body"; echo 'NEXUSEOF'; } >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
           name: netsec-package
           path: build/*.zip
 
-      - name: Publish release
+      - name: Publish GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: build/*.zip
           generate_release_notes: true
 
-      # Everything a Nexus upload needs, in one place, so publishing is a paste
-      # rather than a hunt.
-      - name: Nexus upload checklist
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: pwsh
+  nexus:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    # A named environment so a required reviewer can be added later without
+    # touching this file. Publishing to a public mod page is the one step here
+    # that other people see immediately.
+    environment: nexus
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: netsec-package
+
+      # Refuses rather than uploads if setup was never done - an upload with a
+      # blank file id fails somewhere less obvious.
+      - name: Check setup
         run: |
-          $zip = Get-ChildItem build\*.zip | Select-Object -First 1
-          $v   = "${{ github.ref_name }}" -replace '^v', ''
-          Write-Host ""
-          Write-Host "NEXUS UPLOAD"
-          Write-Host "  file          : $($zip.Name)  ($([math]::Round($zip.Length/1KB)) KB)"
-          Write-Host "  version       : $v"
-          Write-Host "  download from : ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
-          Write-Host ""
-          Write-Host "  Nexus has no upload API - this step is deliberately manual."
+          missing=
+          [ -z "${{ secrets.NEXUS_API_KEY }}" ] && missing="$missing NEXUS_API_KEY(secret)"
+          [ -z "${{ vars.NEXUS_FILE_ID }}" ]    && missing="$missing NEXUS_FILE_ID(var)"
+          [ -z "${{ vars.NEXUS_MOD_ID }}" ]     && missing="$missing NEXUS_MOD_ID(var)"
+          if [ -n "$missing" ]; then
+            echo "not configured for Nexus upload, missing:$missing"
+            echo "see the comment at the top of this workflow"
+            exit 1
+          fi
+
+      - name: Upload to Nexus Mods
+        # Pinned to an exact tag, not a floating v1 - there IS no v1, the
+        # newest is v1.0.0-beta.10, and this is a beta whose inputs can still
+        # move. Bump deliberately after reading its changelog.
+        uses: Nexus-Mods/upload-action@v1.0.0-beta.10
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_id: ${{ vars.NEXUS_FILE_ID }}
+          mod_id:  ${{ vars.NEXUS_MOD_ID }}
+          filename: ${{ needs.build.outputs.zipname }}
+          version:  ${{ needs.build.outputs.version }}
+          display_name: NetSec ${{ needs.build.outputs.version }}
+          category: main
+          changelog: ${{ needs.build.outputs.version }} — see https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+          # Keeps the Files tab from filling up with every version ever shipped.
+          archive_existing_version: 'true'
+          # The mod's headline version follows the file, so the page never
+          # advertises a version nobody can download.
+          update_mod_version: 'true'
+          primary_mod_manager_download: 'true'
+          allow_mod_manager_download: 'true'
